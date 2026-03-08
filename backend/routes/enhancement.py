@@ -1,32 +1,57 @@
 """
-Image Enhancement router — IT22348098
+Image Enhancement routes — IT22348098
 ======================================
-Handles all /api/enhance endpoints for the U-Net-based document
-deblurring/denoising feature.  Other teammates' routers should live
-in separate files inside this same routers/ package.
+All /api/enhance* endpoints for the U-Net-based medical report
+deblurring and denoising feature.
+
+Teammates: add your own route files alongside this one in routes/.
 """
 
 import time
+from pathlib import Path
 from typing import List
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from enhance import ModelEnhancer
-from utils import read_image_from_bytes, image_to_base64
+from app.features.medical_report_enhancement import ModelEnhancer
+from utils import image_to_base64, read_image_from_bytes
 
 router = APIRouter(prefix="/api", tags=["enhancement"])
 
-# Module-level model instance — loaded once when the router is imported.
-enhancer = ModelEnhancer("model/best_model.keras")
+# Resolve model path: backend/routes/ → backend/models/medical_report_enhancement/
+_MODEL_PATH = (
+    Path(__file__).parent.parent
+    / "models"
+    / "medical_report_enhancement"
+    / "best_model.keras"
+)
+
+# Lazy-loaded model instance.  `load_enhancer()` is called once during
+# application startup (registered in app/main.py), so importing this module
+# does NOT trigger model loading (helpful for testing or when disabled).
+enhancer: "ModelEnhancer | None" = None
+
+
+def load_enhancer() -> None:
+    """Load the model.  Called once during application startup."""
+    global enhancer
+    enhancer = ModelEnhancer(str(_MODEL_PATH))
+
+
+def _get_enhancer() -> ModelEnhancer:
+    if enhancer is None:
+        raise HTTPException(503, "Enhancement model is not loaded yet")
+    return enhancer
 
 
 @router.get("/health")
 async def health():
     """Return backend status and model-load information."""
+    active = enhancer
     return {
         "status": "ok",
-        "model_loaded": enhancer.is_loaded,
-        "model_params": enhancer.param_count,
+        "model_loaded": active.is_loaded if active is not None else False,
+        "model_params": active.param_count if active is not None else 0,
     }
 
 
@@ -41,7 +66,7 @@ async def enhance_single(file: UploadFile = File(...)):
         img = read_image_from_bytes(contents)
 
         start = time.time()
-        enhanced, psnr_val, ssim_val = enhancer.enhance(img)
+        enhanced, psnr_val, ssim_val = _get_enhancer().enhance(img)
         elapsed = time.time() - start
 
         return {
@@ -70,7 +95,7 @@ async def enhance_batch(files: List[UploadFile] = File(...)):
             img = read_image_from_bytes(contents)
 
             start = time.time()
-            enhanced, psnr_val, ssim_val = enhancer.enhance(img)
+            enhanced, psnr_val, ssim_val = _get_enhancer().enhance(img)
             elapsed = time.time() - start
 
             results.append(
@@ -84,6 +109,8 @@ async def enhance_batch(files: List[UploadFile] = File(...)):
                     "status": "success",
                 }
             )
+        except HTTPException:
+            raise
         except Exception as e:
             results.append(
                 {

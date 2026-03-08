@@ -1,8 +1,13 @@
 /**
- * Enhancement Feature — entry point (IT22348098)
- * ------------------------------------------------
- * Owns all state and handlers for the image enhancement workflow.
- * Import <EnhancementFeature /> into App.jsx (or any page) to embed it.
+ * Enhancement Page — IT22348098
+ * --------------------------------
+ * Medical Report Image Enhancement feature page.
+ * Self-contained: manages its own state, toast notifications, and all UI.
+ * No header — drop it into any layout your teammates build.
+ *
+ * Usage:
+ *   import EnhancementPage from './pages/EnhancementPage';
+ *   <EnhancementPage />
  */
 
 import { useState, useCallback } from 'react';
@@ -11,12 +16,20 @@ import UploadZone from './components/UploadZone.jsx';
 import ImageGallery from './components/ImageGallery.jsx';
 import Lightbox from './components/Lightbox.jsx';
 import { enhanceBatch } from './api.js';
+import './EnhancementPage.css';
 
-function EnhancementFeature({ onToast }) {
+function EnhancementPage() {
   const [images, setImages] = useState([]);
   const [selectedImageId, setSelectedImageId] = useState(null);
   const [lightbox, setLightbox] = useState(null); // { url, type, imageId }
   const [isProcessing, setIsProcessing] = useState(false);
+  const [toast, setToast] = useState(null); // { message, type: 'success'|'error' }
+
+  // ── Toast ───────────────────────────────────────────────────────────────────
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  }, []);
 
   // ── File selection ──────────────────────────────────────────────────────────
   const handleFilesSelected = useCallback((files) => {
@@ -71,9 +84,9 @@ function EnhancementFeature({ onToast }) {
       const successCount = results.filter((r) => r.status === 'success').length;
       const errorCount = results.filter((r) => r.status === 'error').length;
       if (errorCount > 0) {
-        onToast?.(`Enhanced ${successCount} image(s), ${errorCount} failed.`, 'error');
+        showToast(`Enhanced ${successCount} image(s), ${errorCount} failed.`, 'error');
       } else {
-        onToast?.(`Successfully enhanced ${successCount} image(s)! 🎉`, 'success');
+        showToast(`Successfully enhanced ${successCount} image(s)! 🎉`, 'success');
       }
     } catch (err) {
       setImages((prev) =>
@@ -83,11 +96,11 @@ function EnhancementFeature({ onToast }) {
             : img
         )
       );
-      onToast?.(`Enhancement failed: ${err.message}`, 'error');
+      showToast(`Enhancement failed: ${err.message}`, 'error');
     } finally {
       setIsProcessing(false);
     }
-  }, [images, onToast]);
+  }, [images, showToast]);
 
   // ── UI handlers ─────────────────────────────────────────────────────────────
   const handleImageClick = useCallback((imageId) => {
@@ -116,7 +129,7 @@ function EnhancementFeature({ onToast }) {
   const doneCount = images.filter((img) => img.status === 'done').length;
 
   return (
-    <>
+    <div className="enhancement-page">
       <UploadZone
         onFilesSelected={handleFilesSelected}
         onEnhanceAll={handleEnhanceAll}
@@ -144,8 +157,15 @@ function EnhancementFeature({ onToast }) {
           onClose={handleCloseLightbox}
         />
       )}
-    </>
+
+      {toast && (
+        <div className={`enhancement-toast enhancement-toast--${toast.type}`}>
+          {toast.message}
+        </div>
+      )}
+    </div>
   );
 }
 
-export default EnhancementFeature;
+export default EnhancementPage;
+

@@ -18,16 +18,22 @@ except ImportError:
 class ModelEnhancer:
     """Load a Keras U-Net and run overlapping-patch inference on grayscale images."""
 
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, batch_size: int = 32):
         self.model = None
         self.is_loaded = False
         self.param_count = 0
         self.patch_size = 128
+        self.batch_size = batch_size
+        self._model_path = model_path
 
         if not TF_AVAILABLE:
             print("⚠️  TensorFlow not installed — model loading skipped")
             return
 
+        self._load_model()
+
+    def _load_model(self) -> None:
+        """Load the Keras model from *self._model_path*."""
         try:
             custom_objects = {
                 "document_loss": self._document_loss,
@@ -35,7 +41,7 @@ class ModelEnhancer:
                 "ssim_metric_fn": self._ssim_metric,
             }
             self.model = tf.keras.models.load_model(
-                model_path, custom_objects=custom_objects
+                self._model_path, custom_objects=custom_objects
             )
             self.is_loaded = True
             self.param_count = self.model.count_params()
@@ -81,7 +87,7 @@ class ModelEnhancer:
 
         # Batch predict
         patches_array = np.array(patches)[..., np.newaxis]
-        enhanced_patches = self.model.predict(patches_array, batch_size=32, verbose=0)
+        enhanced_patches = self.model.predict(patches_array, batch_size=self.batch_size, verbose=0)
 
         # Stitch back with averaging over overlapping regions
         for (y, x), ep in zip(positions, enhanced_patches):

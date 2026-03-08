@@ -35,7 +35,7 @@ function MetricsCard({ psnr, ssim, processingTime }) {
         {processingTime !== null && processingTime !== undefined ? (
           <div className="metric">
             <span className="metric-label">Time</span>
-            <span className="metric-value">{processingTime}s</span>
+            <span className="metric-value">{processingTime.toFixed(2)}s</span>
           </div>
         ) : null}
       </div>
