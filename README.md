@@ -11,26 +11,36 @@ frontend/                    # React app (Vite + React)
 ├── index.html
 └── src/
     ├── main.jsx
-    ├── App.jsx / App.css
+    ├── App.jsx / App.css      # App shell — registers all features
     ├── index.css
     ├── components/
-    │   ├── Header.jsx / Header.css
-    │   ├── UploadZone.jsx / UploadZone.css
-    │   ├── ImageGallery.jsx / ImageGallery.css
-    │   ├── ComparisonSlider.jsx / ComparisonSlider.css
-    │   ├── Lightbox.jsx / Lightbox.css
-    │   └── MetricsCard.jsx / MetricsCard.css
-    └── utils/
-        └── api.js
+    │   └── Header.jsx / Header.css   # Shared UI
+    └── features/
+        └── enhancement/              # ← Image Enhancement (IT22348098)
+            ├── index.jsx             #   Feature entry point + state
+            ├── api.js                #   API helpers for /api/enhance*
+            └── components/
+                ├── UploadZone.jsx / UploadZone.css
+                ├── ImageGallery.jsx / ImageGallery.css
+                ├── ComparisonSlider.jsx / ComparisonSlider.css
+                ├── Lightbox.jsx / Lightbox.css
+                └── MetricsCard.jsx / MetricsCard.css
 
 backend/
-├── main.py                  # FastAPI application
-├── enhance.py               # Model loading + patch-based inference
-├── utils.py                 # Helper functions
+├── main.py                  # App entry point — registers all routers
+├── enhance.py               # ModelEnhancer — U-Net patch inference
+├── utils.py                 # Shared image helpers
 ├── requirements.txt
-└── model/
-    └── .gitkeep             # Place best_model.keras here
+├── model/
+│   └── .gitkeep             # Place best_model.keras here
+└── routers/
+    ├── __init__.py
+    └── enhancement.py       # ← Image Enhancement routes (IT22348098)
 ```
+
+> **For teammates:** add your feature as a new `backend/routers/<feature>.py` and
+> a new `frontend/src/features/<feature>/` folder — this keeps each person's code
+> completely isolated and avoids merge conflicts.
 
 ---
 
@@ -60,6 +70,9 @@ uvicorn main:app --reload --port 8000
 The backend will be available at `http://localhost:8000`.
 Interactive API docs: `http://localhost:8000/docs`
 
+> **Teammates:** add your routes in a new file `backend/routers/<your_feature>.py`,
+> then register it with `app.include_router(your_feature.router)` in `main.py`.
+
 ### 3. Frontend Setup
 
 ```bash
@@ -68,6 +81,9 @@ npm install
 npm run dev
 # Opens at http://localhost:5173
 ```
+
+> **Teammates:** add your UI in `frontend/src/features/<your_feature>/` and
+> mount it in `App.jsx` alongside `<EnhancementFeature />`.
 
 ### 4. Use It!
 

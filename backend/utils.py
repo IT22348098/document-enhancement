@@ -1,7 +1,9 @@
-"""Utility helpers for the DocEnhance AI backend."""
+"""Shared utility helpers for the DocEnhance AI backend."""
 
-import numpy as np
+import base64
+
 import cv2
+import numpy as np
 
 
 SUPPORTED_CONTENT_TYPES = {
@@ -18,6 +20,21 @@ MAX_IMAGE_BYTES = 50 * 1024 * 1024  # 50 MB
 def validate_image_content_type(content_type: str) -> bool:
     """Return True if *content_type* is a supported image MIME type."""
     return content_type in SUPPORTED_CONTENT_TYPES or content_type.startswith("image/")
+
+
+def read_image_from_bytes(image_bytes: bytes) -> np.ndarray:
+    """Decode raw bytes into a grayscale NumPy array."""
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        raise ValueError("Could not decode image")
+    return img
+
+
+def image_to_base64(img: np.ndarray) -> str:
+    """Encode a NumPy image array as a base64 PNG string."""
+    _, buffer = cv2.imencode(".png", img)
+    return base64.b64encode(buffer).decode("utf-8")
 
 
 def resize_if_too_large(img: np.ndarray, max_side: int = 4096) -> np.ndarray:

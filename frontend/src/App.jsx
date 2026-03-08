@@ -1,18 +1,9 @@
 import { useState, useCallback } from 'react';
 import Header from './components/Header.jsx';
-import UploadZone from './components/UploadZone.jsx';
-import ImageGallery from './components/ImageGallery.jsx';
-import Lightbox from './components/Lightbox.jsx';
-import { enhanceBatch } from './utils/api.js';
+import EnhancementFeature from './features/enhancement/index.jsx';
 import './App.css';
 
-let nextId = 0;
-
 function App() {
-  const [images, setImages] = useState([]);
-  const [selectedImageId, setSelectedImageId] = useState(null);
-  const [lightbox, setLightbox] = useState(null); // { url, type, imageId }
-  const [isProcessing, setIsProcessing] = useState(false);
   const [toast, setToast] = useState(null); // { message, type: 'success'|'error' }
 
   const showToast = useCallback((message, type = 'success') => {
@@ -20,141 +11,18 @@ function App() {
     setTimeout(() => setToast(null), 3500);
   }, []);
 
-  const handleFilesSelected = useCallback((files) => {
-    const newImages = files.map((file) => ({
-      id: ++nextId,
-      file,
-      originalUrl: URL.createObjectURL(file),
-      enhancedUrl: null,
-      status: 'pending',
-      psnr: null,
-      ssim: null,
-      processingTime: null,
-      error: null,
-    }));
-    setImages((prev) => [...prev, ...newImages]);
-  }, []);
-
-  const handleEnhanceAll = useCallback(async () => {
-    const pending = images.filter((img) => img.status === 'pending');
-    if (!pending.length) return;
-
-    setIsProcessing(true);
-
-    // Mark all pending as processing
-    setImages((prev) =>
-      prev.map((img) =>
-        img.status === 'pending' ? { ...img, status: 'processing' } : img
-      )
-    );
-
-    try {
-      const files = pending.map((img) => img.file);
-      const { results } = await enhanceBatch(files);
-
-      setImages((prev) =>
-        prev.map((img) => {
-          const result = results.find((r) => r.filename === img.file.name);
-          if (!result) return img;
-
-          if (result.status === 'error') {
-            return { ...img, status: 'error', error: result.error };
-          }
-
-          return {
-            ...img,
-            status: 'done',
-            enhancedUrl: `data:image/png;base64,${result.enhanced_image}`,
-            psnr: result.psnr,
-            ssim: result.ssim,
-            processingTime: result.processing_time,
-          };
-        })
-      );
-
-      const successCount = results.filter((r) => r.status === 'success').length;
-      const errorCount = results.filter((r) => r.status === 'error').length;
-      if (errorCount > 0) {
-        showToast(`Enhanced ${successCount} image(s), ${errorCount} failed.`, 'error');
-      } else {
-        showToast(`Successfully enhanced ${successCount} image(s)! 🎉`, 'success');
-      }
-    } catch (err) {
-      setImages((prev) =>
-        prev.map((img) =>
-          img.status === 'processing'
-            ? { ...img, status: 'error', error: err.message }
-            : img
-        )
-      );
-      showToast(`Enhancement failed: ${err.message}`, 'error');
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [images, showToast]);
-
-  const handleImageClick = useCallback((imageId) => {
-    setSelectedImageId(imageId);
-  }, []);
-
-  const handleOpenLightbox = useCallback((url, type, imageId) => {
-    setLightbox({ url, type, imageId });
-  }, []);
-
-  const handleCloseLightbox = useCallback(() => {
-    setLightbox(null);
-  }, []);
-
-  const handleCloseComparison = useCallback(() => {
-    setSelectedImageId(null);
-  }, []);
-
-  const handleDownloadAll = useCallback(() => {
-    const done = images.filter((img) => img.status === 'done' && img.enhancedUrl);
-    done.forEach((img) => {
-      const a = document.createElement('a');
-      a.href = img.enhancedUrl;
-      a.download = `enhanced_${img.file.name}`;
-      a.click();
-    });
-  }, [images]);
-
-  const pendingCount = images.filter((img) => img.status === 'pending').length;
-  const doneCount = images.filter((img) => img.status === 'done').length;
-
   return (
     <div className="app">
       <Header />
 
       <main className="app-main">
-        <UploadZone
-          onFilesSelected={handleFilesSelected}
-          onEnhanceAll={handleEnhanceAll}
-          isProcessing={isProcessing}
-          pendingCount={pendingCount}
-        />
+        {/* ── Image Enhancement feature (IT22348098) ── */}
+        <EnhancementFeature onToast={showToast} />
 
-        {images.length > 0 && (
-          <ImageGallery
-            images={images}
-            selectedImageId={selectedImageId}
-            onImageClick={handleImageClick}
-            onOpenLightbox={handleOpenLightbox}
-            onCloseComparison={handleCloseComparison}
-            onDownloadAll={handleDownloadAll}
-            doneCount={doneCount}
-          />
-        )}
+        {/* ── Add other teammates' features below ─────
+        <AnotherFeature />
+        ──────────────────────────────────────────── */}
       </main>
-
-      {lightbox && (
-        <Lightbox
-          images={images}
-          initialImageId={lightbox.imageId}
-          initialType={lightbox.type}
-          onClose={handleCloseLightbox}
-        />
-      )}
 
       {toast && (
         <div className={`toast toast--${toast.type}`}>
@@ -166,3 +34,4 @@ function App() {
 }
 
 export default App;
+

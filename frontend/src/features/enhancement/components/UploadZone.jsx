@@ -70,7 +70,7 @@ function UploadZone({ onFilesSelected, onEnhanceAll, isProcessing, pendingCount 
         <input
           ref={fileInputRef}
           type="file"
-          accept=".jpg,.jpeg,.png,.tiff,.tif,.bmp"
+          accept=".jpg,.jpeg,.png,.tiff,.tif,.bmp,.webp"
           multiple
           className="upload-input"
           onChange={handleFileChange}

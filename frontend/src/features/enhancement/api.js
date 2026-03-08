@@ -1,3 +1,8 @@
+/**
+ * Image Enhancement — API helpers (IT22348098)
+ * All calls go to the /api/enhance* backend endpoints.
+ */
+
 const API_BASE = 'http://localhost:8000';
 
 /**
